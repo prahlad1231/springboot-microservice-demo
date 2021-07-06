@@ -4,7 +4,10 @@ import np.com.prahladpanthi.moviecatalogservice.models.CatalogItem;
 import np.com.prahladpanthi.moviecatalogservice.models.Movie;
 import np.com.prahladpanthi.moviecatalogservice.models.Rating;
 import np.com.prahladpanthi.moviecatalogservice.models.UserRating;
+import np.com.prahladpanthi.moviecatalogservice.utils.AvailableService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.client.discovery.DiscoveryClient;
+import org.springframework.cloud.client.discovery.composite.CompositeDiscoveryClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,15 +30,18 @@ public class MovieCatalogController {
     @Autowired
     private WebClient.Builder webClientBuilder;
 
+//    @Autowired
+//    private DiscoveryClient discoveryClient; // for doing advanced load balancing
+
     @GetMapping("/{userId}")
     public List<CatalogItem> getCatalog(@PathVariable("userId") String userId) {
         // get all rated movie IDs
         UserRating ratings = restTemplate
-                .getForObject("http://localhost:8083/ratings/users/" + userId, UserRating.class ); // user ParameterizedTypeReference<Wrapper<>> for other types
+                .getForObject("http://" + AvailableService.MOVIE_RATING_SERVICE + "/ratings/users/" + userId, UserRating.class ); // user ParameterizedTypeReference<Wrapper<>> for other types
 
         // for each movie ID, call movie info service and get details
         return ratings.getUserRating().stream().map(rating -> {
-            Movie movie = restTemplate.getForObject("http://localhost:8082/movies/" + rating.getMovieId(), Movie.class);
+            Movie movie = restTemplate.getForObject("http://" + AvailableService.MOVIE_INFO_SERVICE + "/movies/" + rating.getMovieId(), Movie.class);
             return new CatalogItem(movie.getName(), "Awesome movie", rating.getRating());
         }).collect(Collectors.toList());
 
